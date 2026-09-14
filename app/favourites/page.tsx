@@ -1,6 +1,9 @@
 "use client";
 
+import Navbar from "@/components/Navbar";
 import { useEffect, useState } from "react";
+
+const FAVOURITES_EVENT = "ivy-favourites-updated";
 
 type Listing = {
   listing_id: string;
@@ -35,30 +38,37 @@ export default function FavouritesPage() {
       return;
     }
 
-    const favouriteIds: string[] = JSON.parse(
-      localStorage.getItem("ivy_favourites") || "[]"
-    );
+    async function loadFavourites() {
+      const favouriteIds: string[] = JSON.parse(
+        localStorage.getItem("ivy_favourites") || "[]"
+      );
 
-    fetch("/api/favourites?ids=" + favouriteIds.join(","))
-      .then((response) => response.json())
-      .then((data) => setListings(data));
+      if (favouriteIds.length === 0) {
+        setListings([]);
+        return;
+      }
+
+      const response = await fetch(
+        `/api/favourites?ids=${favouriteIds.join(",")}`
+      );
+
+      const data = await response.json();
+
+      setListings(data);
+    }
+
+    loadFavourites();
+
+    window.addEventListener(FAVOURITES_EVENT, loadFavourites);
+
+    return () => {
+      window.removeEventListener(FAVOURITES_EVENT, loadFavourites);
+    };
   }, []);
 
   return (
     <main className="min-h-screen bg-[#faf9f7] text-zinc-900">
-      <header className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex h-20 max-w-7xl items-center px-6 lg:px-8">
-          <a href="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-900 text-white">
-              I
-            </div>
-
-            <span className="text-xl font-semibold">
-              ivy homes
-            </span>
-          </a>
-        </div>
-      </header>
+      <Navbar />
 
       <section className="mx-auto max-w-7xl px-6 py-12 lg:px-8">
         <p className="text-sm font-medium uppercase tracking-[0.18em] text-zinc-400">
