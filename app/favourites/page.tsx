@@ -39,8 +39,17 @@ export default function FavouritesPage() {
     }
 
     async function loadFavourites() {
+      const email = localStorage.getItem("ivy_user_email");
+
+      if (!email) {
+        window.location.href = "/login";
+        return;
+      }
+
+      const storageKey = `ivy_favourites_${email}`;
+
       const favouriteIds: string[] = JSON.parse(
-        localStorage.getItem("ivy_favourites") || "[]"
+        localStorage.getItem(storageKey) || "[]"
       );
 
       if (favouriteIds.length === 0) {
@@ -61,6 +70,7 @@ export default function FavouritesPage() {
         }
 
         const data = await response.json();
+
         setListings(data);
       } catch {
         setListings([]);

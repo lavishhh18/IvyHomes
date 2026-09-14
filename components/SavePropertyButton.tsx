@@ -2,35 +2,96 @@
 
 import { useEffect, useState } from "react";
 
+const FAVOURITES_EVENT = "ivy-favourites-updated";
+
+type SavePropertyButtonProps = {
+  listingId: string;
+};
+
 export default function SavePropertyButton({
   listingId,
-}: {
-  listingId: string;
-}) {
+}: SavePropertyButtonProps) {
   const [saved, setSaved] = useState(false);
 
+  function getStorageKey() {
+    const email = localStorage.getItem("ivy_user_email");
+
+    if (!email) {
+      return null;
+    }
+
+    return `ivy_favourites_${email}`;
+  }
+
   useEffect(() => {
-    const favourites: string[] = JSON.parse(
-      localStorage.getItem("ivy_favourites") || "[]"
+    function updateSavedState() {
+      const storageKey = getStorageKey();
+
+      if (!storageKey) {
+        setSaved(false);
+        return;
+      }
+
+      const favourites: string[] = JSON.parse(
+        localStorage.getItem(storageKey) || "[]"
+      );
+
+      setSaved(favourites.includes(listingId));
+    }
+
+    updateSavedState();
+
+    window.addEventListener(
+      FAVOURITES_EVENT,
+      updateSavedState
     );
 
-    setSaved(favourites.includes(listingId));
+    window.addEventListener(
+      "pageshow",
+      updateSavedState
+    );
+
+    return () => {
+      window.removeEventListener(
+        FAVOURITES_EVENT,
+        updateSavedState
+      );
+
+      window.removeEventListener(
+        "pageshow",
+        updateSavedState
+      );
+    };
   }, [listingId]);
 
   function toggleSave() {
+    const email = localStorage.getItem("ivy_user_email");
+
+    if (!email) {
+      window.location.href = "/login";
+      return;
+    }
+
+    const storageKey = `ivy_favourites_${email}`;
+
     const favourites: string[] = JSON.parse(
-      localStorage.getItem("ivy_favourites") || "[]"
+      localStorage.getItem(storageKey) || "[]"
     );
 
-    if (favourites.includes(listingId)) {
-      const updated = favourites.filter((id) => id !== listingId);
-      localStorage.setItem("ivy_favourites", JSON.stringify(updated));
-      setSaved(false);
-    } else {
-      const updated = [...favourites, listingId];
-      localStorage.setItem("ivy_favourites", JSON.stringify(updated));
-      setSaved(true);
-    }
+    const updated = favourites.includes(listingId)
+      ? favourites.filter((id) => id !== listingId)
+      : [...favourites, listingId];
+
+    localStorage.setItem(
+      storageKey,
+      JSON.stringify(updated)
+    );
+
+    setSaved(updated.includes(listingId));
+
+    window.dispatchEvent(
+      new Event(FAVOURITES_EVENT)
+    );
   }
 
   return (
