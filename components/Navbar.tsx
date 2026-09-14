@@ -13,7 +13,11 @@ export default function Navbar() {
 
   function logout() {
     localStorage.removeItem("ivy_access_token");
+    localStorage.removeItem("ivy_refresh_token");
     localStorage.removeItem("ivy_user_email");
+    localStorage.removeItem("ivy_token_expires_at");
+
+    setLoggedIn(false);
     window.location.href = "/login";
   }
 

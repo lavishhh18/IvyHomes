@@ -2,9 +2,9 @@ import Navbar from "@/components/Navbar";
 
 const stats = [
   {
-    label: "Total listings",
+    label: "Listing records",
     value: "3,500",
-    description: "Distinct listing records retrieved",
+    description: "Retrieved from the listings dataset",
   },
   {
     label: "Unique properties",
@@ -12,239 +12,271 @@ const stats = [
     description: "After deduplication",
   },
   {
-    label: "Active listings",
+    label: "Live listings",
     value: "2,792",
-    description: "Listings currently marked live",
+    description: "Currently live",
   },
   {
-    label: "Recent listings",
+    label: "Last 7 days",
     value: "129",
-    description: "Posted in the required 7-day window",
-  },
-];
-
-const analysis = [
-  {
-    title: "Monthly rent · Dwarka Expressway",
-    value: "₹54,57,800",
-    description: "Total monthly rent across matching rental records",
+    description: "Listings posted in the reference window",
   },
   {
-    title: "Average 2 BHK price / sq.ft.",
+    label: "2BHK avg. price / sq.ft.",
     value: "₹27,457.66",
-    description: "Live, valid listings after excluding identified bad records",
+    description: "Excluding corrupt and fake candidates",
   },
   {
-    title: "Costliest project",
-    value: "P60060",
-    description: "Mantri Terraces · normalized maximum price ₹5.83 Cr",
-  },
-  {
-    title: "Project count mismatches",
-    value: "295",
-    description: "Projects where total_listings differs from actual listing records",
+    label: "Monthly rent",
+    value: "₹54,57,800",
+    description: "Dwarka Expressway rentals",
   },
 ];
 
 const findings = [
   {
-    number: "01",
-    category: "AUTH",
-    title: "API key uses X-API-Key",
-    text: "The API requires the key in a request header rather than as a query parameter.",
+    category: "Auth",
+    title: "API key must be sent as a header",
+    description:
+      "The running API expects X-API-Key in the request header rather than the documented query parameter.",
   },
   {
-    number: "02",
-    category: "AUTH",
-    title: "Short-lived access tokens",
-    text: "Login returns an access token, refresh token and a 900-second access-token lifetime.",
+    category: "Auth",
+    title: "Login response differs from the documentation",
+    description:
+      "The running login endpoint returns access_token, refresh_token, token_type, expires_in and refresh_url.",
   },
   {
-    number: "03",
-    category: "PAGINATION",
-    title: "Offset pagination",
-    text: "The listings endpoint uses offset and limit. The page parameter does not advance results.",
+    category: "Pagination",
+    title: "Offset pagination is actually used",
+    description:
+      "The documented page parameter does not advance results. Offset-based pagination retrieved the complete dataset.",
   },
   {
-    number: "04",
-    category: "COMPLETENESS",
-    title: "Reported total is wrong",
-    text: "The endpoint reports 3,236 listings, while full retrieval produced 3,500 distinct records.",
+    category: "Completeness",
+    title: "Reported listing total does not match retrieved records",
+    description:
+      "The API reported 3,236 records while offset retrieval produced 3,500 distinct listing IDs.",
   },
   {
-    number: "05",
-    category: "UNITS",
-    title: "Project prices use mixed scales",
-    text: "Project prices require normalization because lakh/crore-style scales are mixed.",
+    category: "Units",
+    title: "Project price scales are inconsistent",
+    description:
+      "Project price fields contain values using mixed lakh/crore-style scales and require normalization.",
   },
   {
-    number: "06",
-    category: "DATA QUALITY",
-    title: "18 impossible listing records",
-    text: "These include negative prices/areas and physically impossible floor or area relationships.",
+    category: "Consistency",
+    title: "Project listing counts contain inconsistencies",
+    description:
+      "295 projects have total_listings values that differ from the listings observed in the dataset.",
   },
   {
-    number: "07",
-    category: "CONSISTENCY",
-    title: "Project listing totals are unreliable",
-    text: "295 project records disagree with listing counts derived from project_id.",
+    category: "Data quality",
+    title: "18 impossible listing records were identified",
+    description:
+      "These records violate objective listing-data constraints and are excluded from the relevant calculations.",
   },
   {
-    number: "08",
-    category: "FRAUD",
-    title: "Seller identity anomalies",
-    text: "230 records were flagged as fake-listing candidates using a high-volume contact / multiple-name heuristic.",
+    category: "Fraud",
+    title: "230 fake-listing candidates were identified",
+    description:
+      "A seller-contact heuristic found 230 records associated with suspicious repeated contact patterns. These are candidates, not confirmed fraud.",
+  },
+  {
+    category: "Endpoint",
+    title: "Analytics summary endpoint is unavailable",
+    description:
+      "GET /v1/analytics/summary returned HTTP 404, so the analytics shown here are computed from the retrieved dataset.",
   },
 ];
 
 export default function InsightsPage() {
   return (
-    <main className="min-h-screen bg-[#faf9f7] text-zinc-900">
+    <main className="min-h-screen bg-[#faf9f7]">
       <Navbar />
 
-      {/* Hero */}
-      <section className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto max-w-7xl px-6 py-16 lg:px-8">
-          <p className="text-sm font-medium uppercase tracking-[0.18em] text-zinc-500">
-            Data insights
+      <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
+        <div className="max-w-3xl">
+          <p className="text-sm font-medium uppercase tracking-[0.18em] text-zinc-400">
+            Insights
           </p>
 
-          <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight sm:text-5xl">
-            The numbers behind the property market.
+          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-zinc-900">
+            Market & dataset insights
           </h1>
 
-          <p className="mt-5 max-w-2xl text-lg leading-8 text-zinc-500">
-            A summary of the Ivy Homes dataset analysis, including
-            listing activity, pricing and data-quality findings.
+          <p className="mt-4 text-base leading-7 text-zinc-500">
+            A summary of the retrieved Ivy Homes dataset, the analysis performed
+            on it, and the inconsistencies found between the API documentation
+            and the running API.
           </p>
         </div>
-      </section>
 
-      {/* Main stats */}
-      <section className="mx-auto max-w-7xl px-6 py-12 lg:px-8">
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {stats.map((stat) => (
             <div
               key={stat.label}
               className="rounded-2xl border border-zinc-200 bg-white p-6"
             >
-              <p className="text-sm text-zinc-500">
+              <p className="text-sm font-medium text-zinc-500">
                 {stat.label}
               </p>
 
-              <p className="mt-3 text-3xl font-semibold tracking-tight">
+              <p className="mt-3 text-3xl font-semibold tracking-tight text-zinc-900">
                 {stat.value}
               </p>
 
-              <p className="mt-2 text-sm leading-6 text-zinc-400">
+              <p className="mt-2 text-sm text-zinc-400">
                 {stat.description}
               </p>
             </div>
           ))}
         </div>
-      </section>
 
-      {/* Analysis */}
-      <section className="border-y border-zinc-200 bg-white">
-        <div className="mx-auto max-w-7xl px-6 py-16 lg:px-8">
-          <div>
-            <p className="text-sm font-medium uppercase tracking-[0.18em] text-zinc-500">
-              Assignment analysis
+        <div className="mt-10 grid gap-6 lg:grid-cols-2">
+          <section className="rounded-2xl border border-zinc-200 bg-white p-6">
+            <p className="text-sm font-medium uppercase tracking-[0.14em] text-zinc-400">
+              Key findings
             </p>
 
-            <h2 className="mt-2 text-3xl font-semibold tracking-tight">
-              Key answers
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900">
+              What the data tells us
+            </h2>
+
+            <div className="mt-6 space-y-5">
+              <div>
+                <p className="font-semibold text-zinc-900">
+                  Large gap between reported and retrieved listings
+                </p>
+
+                <p className="mt-1 text-sm leading-6 text-zinc-500">
+                  The API reported 3,236 listing records, while offset-based
+                  retrieval produced 3,500 distinct listing IDs.
+                </p>
+              </div>
+
+              <div>
+                <p className="font-semibold text-zinc-900">
+                  Listing quality requires filtering
+                </p>
+
+                <p className="mt-1 text-sm leading-6 text-zinc-500">
+                  18 records were identified as objectively impossible, while
+                  230 additional records were flagged as fake-listing
+                  candidates using repeated seller-contact patterns.
+                </p>
+              </div>
+
+              <div>
+                <p className="font-semibold text-zinc-900">
+                  Project prices require normalization
+                </p>
+
+                <p className="mt-1 text-sm leading-6 text-zinc-500">
+                  Project price fields use inconsistent scales, so price
+                  comparisons require an explicit normalization rule.
+                </p>
+              </div>
+
+              <div>
+                <p className="font-semibold text-zinc-900">
+                  API documentation is not fully reliable
+                </p>
+
+                <p className="mt-1 text-sm leading-6 text-zinc-500">
+                  Several documented behaviors differ from the running API,
+                  including authentication, pagination, analytics, and some
+                  data semantics.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-zinc-200 bg-white p-6">
+            <p className="text-sm font-medium uppercase tracking-[0.14em] text-zinc-400">
+              Analytics methodology
+            </p>
+
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900">
+              How these numbers were calculated
+            </h2>
+
+            <div className="mt-6 space-y-4 text-sm leading-6 text-zinc-500">
+              <p>
+                Listing metrics were calculated from the complete locally
+                retrieved listings dataset rather than trusting the API's
+                reported total.
+              </p>
+
+              <p>
+                The 2BHK price-per-square-foot calculation excludes the 18
+                impossible records and the 230 fake-listing candidates.
+              </p>
+
+              <p>
+                The unique-property count uses deduplication across listing
+                records because the dataset does not provide a canonical
+                property identifier.
+              </p>
+
+              <p>
+                Project prices were normalized using the observed lakh/crore
+                scale pattern before identifying the costliest project.
+              </p>
+            </div>
+          </section>
+        </div>
+
+        <section className="mt-10">
+          <div className="mb-5">
+            <p className="text-sm font-medium uppercase tracking-[0.14em] text-zinc-400">
+              API audit
+            </p>
+
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900">
+              Documentation vs. actual API
             </h2>
           </div>
 
-          <div className="mt-10 grid gap-5 md:grid-cols-2">
-            {analysis.map((item) => (
-              <div
-                key={item.title}
-                className="rounded-2xl border border-zinc-200 p-6"
+          <div className="grid gap-4">
+            {findings.map((finding) => (
+              <article
+                key={finding.title}
+                className="rounded-2xl border border-zinc-200 bg-white p-6"
               >
-                <p className="text-sm font-medium text-zinc-500">
-                  {item.title}
-                </p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600">
+                    {finding.category}
+                  </span>
 
-                <p className="mt-3 text-3xl font-semibold tracking-tight">
-                  {item.value}
-                </p>
+                  <h3 className="font-semibold text-zinc-900">
+                    {finding.title}
+                  </h3>
+                </div>
 
-                <p className="mt-2 text-sm leading-6 text-zinc-500">
-                  {item.description}
+                <p className="mt-3 text-sm leading-6 text-zinc-500">
+                  {finding.description}
                 </p>
-              </div>
+              </article>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Findings */}
-      <section className="mx-auto max-w-7xl px-6 py-16 lg:px-8">
-        <div>
-          <p className="text-sm font-medium uppercase tracking-[0.18em] text-zinc-500">
-            Data audit
+        <div className="mt-10 rounded-2xl border border-amber-200 bg-amber-50 p-6">
+          <p className="text-sm font-semibold text-amber-900">
+            Analytics endpoint discrepancy
           </p>
 
-          <h2 className="mt-2 text-3xl font-semibold tracking-tight">
-            What we found
-          </h2>
-
-          <p className="mt-4 max-w-2xl text-zinc-500">
-            The source data contains several inconsistencies. These
-            findings were identified by testing the actual API behaviour
-            and validating the retrieved records.
+          <p className="mt-2 text-sm leading-6 text-amber-800">
+            The documented{" "}
+            <code className="rounded bg-amber-100 px-1.5 py-0.5">
+              GET /v1/analytics/summary
+            </code>{" "}
+            endpoint returned{" "}
+            <strong>404 Not Found</strong> on the running API. The summary
+            displayed on this page is therefore computed directly from the
+            retrieved dataset.
           </p>
-        </div>
-
-        <div className="mt-10 grid gap-px overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-200 md:grid-cols-2">
-          {findings.map((finding) => (
-            <article
-              key={finding.number}
-              className="bg-white p-7"
-            >
-              <div className="flex items-start justify-between gap-6">
-                <span className="text-xs font-semibold tracking-widest text-zinc-400">
-                  {finding.number}
-                </span>
-
-                <span className="rounded-full bg-zinc-100 px-3 py-1 text-[10px] font-semibold tracking-widest text-zinc-500">
-                  {finding.category}
-                </span>
-              </div>
-
-              <h3 className="mt-6 text-lg font-semibold">
-                {finding.title}
-              </h3>
-
-              <p className="mt-2 text-sm leading-6 text-zinc-500">
-                {finding.text}
-              </p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      {/* Footer CTA */}
-      <section className="bg-zinc-900 text-white">
-        <div className="mx-auto max-w-7xl px-6 py-16 lg:px-8">
-          <div className="max-w-2xl">
-            <p className="text-sm uppercase tracking-[0.18em] text-zinc-400">
-              Explore the data
-            </p>
-
-            <h2 className="mt-3 text-3xl font-semibold tracking-tight">
-              Ready to find your next home?
-            </h2>
-
-            <a
-              href="/listings"
-              className="mt-7 inline-block rounded-full bg-white px-6 py-3 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-200"
-            >
-              Browse listings
-            </a>
-          </div>
         </div>
       </section>
     </main>

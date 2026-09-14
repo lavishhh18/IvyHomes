@@ -1,89 +1,181 @@
 import fs from "fs";
+import { execFileSync } from "child_process";
 
-const answers = JSON.parse(
-  fs.readFileSync("submission-answers.json", "utf8")
+const output = execFileSync(
+  process.execPath,
+  ["scripts/final-answers.mjs"],
+  {
+    encoding: "utf8",
+  }
 );
 
+const answers = JSON.parse(output);
+
 const submission = {
-  api_key: process.env.IVY_API_KEY,
+  api_key: "YOUR_API_KEY",
+
   candidate: {
     name: "YOUR_NAME",
     email: "YOUR_EMAIL",
-    repo_url: "YOUR_GITHUB_REPO_URL",
-    demo_url: "YOUR_DEPLOYED_APP_URL"
+    github_repo: "https://github.com/lavishhh18/IvyHomes",
+    demo_url: "YOUR_VERCEL_URL",
   },
+
   answers,
+
   findings: [
     {
+      endpoint: "*",
       category: "auth",
-      title: "API key must be sent as a header",
-      documented: "API key requirement differs from the actual request requirement.",
-      actual: "The API requires the key in the X-API-Key request header.",
-      how_found: "A request using a query parameter failed, while X-API-Key succeeded.",
-      impact: "Authentication fails unless the API key is sent using the required header."
+      title: "API key is expected in the X-API-Key header",
+      documented:
+        "The API documentation describes the API key as a query parameter.",
+      actual:
+        "The running API requires X-API-Key in the request header.",
+      how_found:
+        "Calling the authentication endpoint with the documented query-parameter form returned 401; retrying with X-API-Key header succeeded.",
+      impact:
+        "Clients following the documentation literally fail authentication.",
+      evidence: [],
     },
+
     {
+      endpoint: "/auth/login",
       category: "auth",
-      title: "Login response differs from documentation",
-      documented: "Documentation describes a different token format and lifetime.",
-      actual: "Login returns access_token, refresh_token, token_type and expires_in. The access token expires after 900 seconds.",
-      how_found: "Inspected the successful login response.",
-      impact: "The application must use the actual access-token and refresh-token flow."
+      title: "Login response contains undocumented session fields",
+      documented:
+        "The documented login contract does not describe the complete access and refresh token response observed from the running API.",
+      actual:
+        "The running API returns access_token, refresh_token, token_type, expires_in, refresh_url and user.",
+      how_found:
+        "Called POST /auth/login with valid credentials and inspected the response.",
+      impact:
+        "The frontend must use the actual token response to maintain an authenticated session.",
+      evidence: [],
     },
+
     {
+      endpoint: "/v1/listings",
       category: "pagination",
-      title: "Listings pagination uses offset, not page",
-      documented: "Documentation suggests page-based pagination.",
-      actual: "Listings are paginated using offset and limit. Changing page did not change results, while offset did.",
-      how_found: "Compared requests using different page and offset values.",
-      impact: "Full retrieval requires offset-based pagination."
+      title: "Offset pagination works while page pagination does not advance results",
+      documented:
+        "The documentation describes page-based pagination.",
+      actual:
+        "Changing page did not advance the returned records; offset-based retrieval returned subsequent records.",
+      how_found:
+        "Compared requests using page=2 and offset-based requests.",
+      impact:
+        "A client implementing page pagination exactly as documented can repeatedly retrieve the same records.",
+      evidence: [],
     },
+
     {
+      endpoint: "/v1/listings",
       category: "completeness",
-      title: "Reported listing total is incorrect",
-      documented: "The listings response provides a total field.",
-      actual: "The API reported total 3236, but 3500 distinct records were retrieved.",
-      how_found: "Downloaded all batches using offset pagination and counted unique listing IDs.",
-      impact: "The total field cannot be trusted for determining dataset completeness."
+      title: "Reported listing total is lower than the records retrievable from the endpoint",
+      documented:
+        "The endpoint reports a total record count for the listings collection.",
+      actual:
+        "The API reported 3,236 records while complete offset retrieval produced 3,500 distinct listing IDs.",
+      how_found:
+        "Paginated through the listings endpoint using offset until has_more was false and counted distinct listing IDs.",
+      impact:
+        "The reported total cannot be used as the authoritative dataset size.",
+      evidence: [
+        "reported_total=3236",
+        "retrieved_distinct_listing_ids=3500",
+      ],
     },
+
     {
+      endpoint: "/v1/projects",
       category: "units",
-      title: "Project prices use inconsistent units/scales",
-      documented: "Project prices are represented as numeric values.",
-      actual: "Project prices use mixed lakh/crore-style scales rather than one consistent INR scale.",
-      how_found: "Compared price_min and price_max values across project records.",
-      impact: "Prices must be normalized before comparing projects."
+      title: "Project price fields use inconsistent numeric scales",
+      documented:
+        "Project prices are described as INR values.",
+      actual:
+        "Observed values require lakh/crore-style normalization to compare projects correctly.",
+      how_found:
+        "Compared project price magnitudes against project names and surrounding dataset values and normalized the observed scales.",
+      impact:
+        "Sorting or comparing raw price_max values can produce materially incorrect results.",
+      evidence: [
+        "P60060",
+        "P60001",
+        "P60004",
+        "P60005",
+        "P60009",
+      ],
     },
+
     {
+      endpoint: "/v1/projects",
       category: "consistency",
-      title: "Project total_listings is inconsistent",
-      documented: "Projects contain a total_listings field.",
-      actual: "295 projects have a total_listings value different from the actual listing count by project_id.",
-      how_found: "Grouped all listing records by project_id and compared the counts.",
-      impact: "total_listings should not be treated as the authoritative listing count."
+      title: "Project total_listings values do not consistently match observed listing counts",
+      documented:
+        "Projects expose total_listings metadata.",
+      actual:
+        "295 projects have total_listings values that differ from the counts derived from the retrieved listings.",
+      how_found:
+        "Grouped listings by project and compared those counts with each project's total_listings field.",
+      impact:
+        "Project-level inventory counts should not be blindly trusted as authoritative.",
+      evidence: [],
     },
+
     {
+      endpoint: "/v1/listings",
       category: "data_quality",
-      title: "Some listing records contain impossible values",
-      documented: "Listings contain numeric property attributes such as price, floor and area.",
-      actual: "18 listings contain objectively impossible values.",
-      how_found: "Checked for negative prices/areas, floor greater than total floors, and carpet area greater than super built-up area.",
-      impact: "These records should be excluded from calculations requiring valid property data."
+      title: "18 listing records contain objective data-quality violations",
+      documented:
+        "Listings are expected to contain valid listing attributes.",
+      actual:
+        "18 records violate objective constraints used in the analysis.",
+      how_found:
+        "Applied validation checks to listing fields and identified impossible records.",
+      impact:
+        "These records were excluded from calculations that depend on valid listing data.",
+      evidence: answers.corrupt_listing_ids,
     },
+
     {
+      endpoint: "/v1/listings",
       category: "fraud",
-      title: "Strong fake-listing indicators exist in seller data",
-      documented: "Seller contact and seller name fields are provided.",
-      actual: "12 seller contacts are associated with at least 10 listings and at least 3 different seller names, covering 230 listings.",
-      how_found: "Grouped listings by seller contact and checked for high-volume contacts with multiple seller identities.",
-      impact: "These 230 records were treated as fake-listing candidates for the required analysis."
-    }
-  ]
+      title: "230 listings are suspicious fake-listing candidates",
+      documented:
+        "The listing contract does not provide a definitive fraud flag.",
+      actual:
+        "A seller-contact heuristic identified 230 candidate records associated with suspicious repeated contact patterns.",
+      how_found:
+        "Grouped listings by seller contact and flagged groups with repeated contact information combined with multiple seller names.",
+      impact:
+        "These candidates were excluded from the 2BHK price-per-square-foot analysis to reduce contamination from suspicious records.",
+      evidence: answers.fake_listing_ids,
+    },
+
+    {
+      endpoint: "/v1/analytics/summary",
+      category: "endpoint",
+      title: "Documented analytics summary endpoint is unavailable",
+      documented:
+        "GET /v1/analytics/summary is documented as the analytics summary endpoint.",
+      actual:
+        "The running API returned HTTP 404 Not Found.",
+      how_found:
+        "Called the documented endpoint with a valid API key and authenticated access token.",
+      impact:
+        "The frontend cannot depend on the documented analytics endpoint and instead computes the analytics summary from the retrieved dataset.",
+      evidence: [
+        "HTTP 404",
+        "detail=Not Found",
+      ],
+    },
+  ],
 };
 
 fs.writeFileSync(
   "submission.json",
-  JSON.stringify(submission, null, 2)
+  JSON.stringify(submission, null, 2) + "\n"
 );
 
-console.log("submission.json created successfully");
+console.log("submission.json generated successfully");
