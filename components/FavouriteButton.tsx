@@ -14,24 +14,49 @@ export default function FavouriteButton({
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    const updateSavedState = () => {
+    function updateSavedState() {
       const favourites: string[] = JSON.parse(
         localStorage.getItem("ivy_favourites") || "[]"
       );
 
       setSaved(favourites.includes(listingId));
-    };
+    }
 
     updateSavedState();
 
-    window.addEventListener(FAVOURITES_EVENT, updateSavedState);
+    window.addEventListener(
+      FAVOURITES_EVENT,
+      updateSavedState
+    );
+
+    window.addEventListener("pageshow", updateSavedState);
+
+    window.addEventListener(
+      "visibilitychange",
+      updateSavedState
+    );
 
     return () => {
-      window.removeEventListener(FAVOURITES_EVENT, updateSavedState);
+      window.removeEventListener(
+        FAVOURITES_EVENT,
+        updateSavedState
+      );
+
+      window.removeEventListener(
+        "pageshow",
+        updateSavedState
+      );
+
+      window.removeEventListener(
+        "visibilitychange",
+        updateSavedState
+      );
     };
   }, [listingId]);
 
-  function toggleFavourite(event: React.MouseEvent) {
+  function toggleFavourite(
+    event: React.MouseEvent<HTMLButtonElement>
+  ) {
     event.preventDefault();
     event.stopPropagation();
 
@@ -43,11 +68,16 @@ export default function FavouriteButton({
       ? favourites.filter((id) => id !== listingId)
       : [...favourites, listingId];
 
-    localStorage.setItem("ivy_favourites", JSON.stringify(updated));
+    localStorage.setItem(
+      "ivy_favourites",
+      JSON.stringify(updated)
+    );
 
     setSaved(updated.includes(listingId));
 
-    window.dispatchEvent(new Event(FAVOURITES_EVENT));
+    window.dispatchEvent(
+      new Event(FAVOURITES_EVENT)
+    );
   }
 
   return (
@@ -55,7 +85,9 @@ export default function FavouriteButton({
       type="button"
       onClick={toggleFavourite}
       aria-label={
-        saved ? "Remove from favourites" : "Add to favourites"
+        saved
+          ? "Remove from favourites"
+          : "Add to favourites"
       }
       className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-lg shadow-sm backdrop-blur"
     >
