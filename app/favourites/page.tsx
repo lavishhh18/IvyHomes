@@ -48,21 +48,49 @@ export default function FavouritesPage() {
         return;
       }
 
-      const response = await fetch(
-        `/api/favourites?ids=${favouriteIds.join(",")}`
-      );
+      try {
+        const response = await fetch(
+          `/api/favourites?ids=${favouriteIds.join(",")}`,
+          {
+            cache: "no-store",
+          }
+        );
 
-      const data = await response.json();
+        if (!response.ok) {
+          throw new Error("Failed to load favourites");
+        }
 
-      setListings(data);
+        const data = await response.json();
+        setListings(data);
+      } catch {
+        setListings([]);
+      }
     }
 
     loadFavourites();
 
-    window.addEventListener(FAVOURITES_EVENT, loadFavourites);
+    function handleFavouritesUpdated() {
+      loadFavourites();
+    }
+
+    function handlePageShow() {
+      loadFavourites();
+    }
+
+    window.addEventListener(
+      FAVOURITES_EVENT,
+      handleFavouritesUpdated
+    );
+
+    window.addEventListener("pageshow", handlePageShow);
 
     return () => {
-      window.removeEventListener(FAVOURITES_EVENT, loadFavourites);
+      window.removeEventListener(
+        FAVOURITES_EVENT,
+        handleFavouritesUpdated
+      );
+
+      window.removeEventListener("pageshow", handlePageShow);
     };
   }, []);
 
